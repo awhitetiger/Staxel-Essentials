@@ -1,9 +1,7 @@
-using System;
 using Plukit.Base;
 using Staxel.Logic;
 using Staxel.Server;
 using Staxel.Commands;
-using Staxel.Player;
 
 namespace StaxelEssentials
 {
@@ -27,9 +25,10 @@ namespace StaxelEssentials
             EntityId playerEntityId2 = api.FindPlayerEntityId(bits[1]);
             Entity entity1;
             Entity entity2;
-            if (!api.TryGetEntity(playerEntityId1, out entity1) || !api.TryGetEntity(playerEntityId2, out entity2)) //if either don't exist
+            if (!api.TryGetEntity(playerEntityId1, out entity1) || !api.TryGetEntity(playerEntityId2, out entity2))
                 return "commands.playerEntityNotFound";
-            if (!entity1.Physics.Teleport(entity2.Physics.Position)) //Think this has something to do w/ render distance
+            StaxelEssentialsHolder.SetBack(entity1.Physics.Position);
+            if (!entity1.Physics.Teleport(entity2.Physics.Position))
                 return "commands.teleport.distance";
             return "commands.teleport.success";
         }
@@ -51,7 +50,6 @@ namespace StaxelEssentials
             Entity entity;
             if (!api.TryGetEntity(connectionEntityId, out entity))
             {
-                responseParams = new object[0];
                 return "commands.playerEntityNotFound";
             }
             entity.PlayerEntityLogic.SetHome(entity.Physics.Position);
@@ -75,15 +73,46 @@ namespace StaxelEssentials
             Entity entity;
             if (!api.TryGetEntity(connectionEntityId, out entity))
             {
-                responseParams = new object[0];
                 return "commands.playerEntityNotFound";
             }
+            StaxelEssentialsHolder.SetBack(entity.Physics.Position);
             if (entity.Physics.Teleport(entity.PlayerEntityLogic.GetHome()))
-                return "commands.teleport.success";
-            responseParams = new object[1]
             {
-        (object) entity.PlayerEntityLogic.GetHome()
-            };
+                return "commands.teleport.success";
+            }
+            return "commands.teleport.distance";
+        }
+    }
+
+    public class backCommand : ICommandBuilder
+    {
+        public string Kind => "back";
+
+        public string Usage => "StaxelEssentials - /back";
+
+        public bool Public => true;
+
+        public string Execute(string[] bits, Blob blob, ClientServerConnection connection, ICommandsApi api, out object[] responseParams)
+        {
+            Vector3D storeLast;
+            responseParams = new object[0];
+            string player = connection.Credentials.Username;
+            EntityId connectionEntityId = api.FindPlayerEntityId(player);
+            Entity entity;
+            if (!api.TryGetEntity(connectionEntityId, out entity))
+            {
+                return "commands.playerEntityNotFound";
+            }
+            if (StaxelEssentialsHolder.GetBack() == null)
+            {
+                return "You don't have a place to go back to!";
+            }
+            storeLast = entity.Physics.Position;
+            if (entity.Physics.Teleport(StaxelEssentialsHolder.GetBack()))
+            {
+                StaxelEssentialsHolder.SetBack(storeLast);
+                return "commands.teleport.success";
+            }
             return "commands.teleport.distance";
         }
     }
